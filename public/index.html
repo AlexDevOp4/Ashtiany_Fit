@@ -344,14 +344,14 @@
       form.addEventListener('submit', function (e) {
         e.preventDefault();
 
-        // 2) Time-to-complete (>= 5s)
+        // Time-to-complete (>= 5s)
         const elapsed = Date.now() - startedAt;
         if (elapsed < 5000) {
           fail('Form submitted too fast. Please try again.');
           return;
         }
 
-        // 3) Math challenge
+        // Math challenge
         const expected = document.getElementById('challenge_answer').value;
         const provided = document.getElementById('challengeInput').value.trim();
         if (provided !== expected) {
