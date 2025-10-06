@@ -327,6 +327,9 @@
   <!-- ===== Minimal JS: accessibility & anti-spam ===== -->
   <script>
     (function () {
+      // time-to-complete
+      const startedAt = Date.now();
+      const ttc = document.getElementById("time_to_complete");
 
       document.getElementById('form_started_at').value = String(startedAt);
 
@@ -402,10 +405,7 @@
       set("landing_path", location.pathname);
       set("device", navigator.userAgent);
 
-      // time-to-complete
-      const t0 = Date.now();
-      const ttc = document.getElementById("time_to_complete");
-      document.addEventListener("submit", () => { if (ttc) ttc.value = String(Date.now() - t0); });
+      document.addEventListener("submit", () => { if (ttc) ttc.value = String(Date.now() - startedAt); });
     })();
   </script>
 </body>
