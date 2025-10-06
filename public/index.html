@@ -222,11 +222,6 @@
       <form id="bookingForm"name="consultation" method="POST" data-netlify="true" netlify-honeypot="company">
         <input type="hidden" name="form-name" value="consultation" />
 
-        <div class="hp-wrap" aria-hidden="true">
-          <label for="company">Company</label>
-          <input type="text" id="company" name="company" tabindex="-1" autocomplete="off" />
-        </div>
-
         <!-- Time-to-complete guard -->
         <input type="hidden" id="form_started_at" name="form_started_at" value="" />
 
@@ -348,13 +343,6 @@
 
       form.addEventListener('submit', function (e) {
         e.preventDefault();
-
-        // 1) Honeypot
-        const hp = document.getElementById('company');
-        if (hp.value && hp.value.trim() !== '') {
-          fail('Spam detected.');
-          return;
-        }
 
         // 2) Time-to-complete (>= 5s)
         const elapsed = Date.now() - startedAt;
