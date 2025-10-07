@@ -1,5 +1,5 @@
 const POSTMARK_API = "https://api.postmarkapp.com/email";
-
+const AIRTABLE_API = "https://api.airtable.com/v0";
 exports.handler = async (event) => {
   try {
     console.log("submission-created LOADED");
