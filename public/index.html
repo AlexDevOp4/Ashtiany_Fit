@@ -5,8 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Ashtiany Fitness | Elite Coaching for Real-Life Results — Strength, Fat Loss, Recomp, Virtual Coaching</title>
-  <meta name="description"
-    content="Ashtiany Fitness offers disciplined, time-efficient personal training: strength training, fat loss, body recomposition, and virtual coaching. Schedule a free consultation." />
+  <meta name="description" content="Ashtiany Fitness offers disciplined, time-efficient personal training: strength training, fat loss, body recomposition, and virtual coaching. Schedule a free consultation." />
   <link rel="canonical" href="https://www.ashtianyfit.com/" />
   <meta name="robots" content="index, follow" />
 
@@ -163,8 +162,7 @@
     .consent-row input[type="checkbox"] {
       appearance: auto;
       display: inline-block;
-      width: auto;
-      height: auto;
+      width: auto; height: auto;
       transform: scale(1.3);
       accent-color: var(--brand);
       cursor: pointer;
@@ -232,17 +230,19 @@
   <main class="container">
     <section class="hero">
       <h1 class="headline">Elite Coaching for Real-Life Results</h1>
-      <p class="subhead">I specialize in strength training, fat loss, and body recomposition — in-person or virtual
-        programming built for tight schedules. With over 15 years of experience training clients across all age groups,
-        I’m dedicated to helping people become fit, strong, and pain-free through structured, disciplined coaching.</p>
+      <p class="subhead">I specialize in strength training, fat loss, and body recomposition — in-person or virtual programming built for tight schedules. With over 15 years of experience training clients across all age groups, I’m dedicated to helping people become fit, strong, and pain-free through structured, disciplined coaching.</p>
     </section>
 
     <section class="card">
-      <form name="consultation" method="POST" data-netlify="true">
+      <form name="consultation" method="POST" data-netlify="true" netlify-honeypot="company">
         <input type="hidden" name="form-name" value="consultation" />
 
-        <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
-          <label>Company <input type="text" name="company" autocomplete="off" tabindex="-1" /></label>
+        <!-- Robust honeypot: dynamic name to defeat autofill/robots -->
+        <input type="hidden" id="hp_key" name="hp_key" value="" />
+        <div id="hp_wrap" style="display:none" aria-hidden="true">
+          <label>Leave this field empty
+            <input id="hp_field" type="text" autocomplete="nope" inputmode="none" tabindex="-1" data-lpignore="true" data-1p-ignore="true" />
+          </label>
         </div>
 
         <div class="grid two">
@@ -288,8 +288,7 @@
 
         <div>
           <label for="goals">Context (goals, constraints, timeline)</label>
-          <textarea id="goals" name="goals"
-            placeholder="Example: Busy parent, 4 hours/week available. Goal: lose 10 lbs in 12 weeks and build strength."></textarea>
+          <textarea id="goals" name="goals" placeholder="Example: Busy parent, 4 hours/week available. Goal: lose 10 lbs in 12 weeks and build strength."></textarea>
         </div>
 
         <div class="consent-row">
@@ -297,7 +296,7 @@
           <label for="consent">I agree to the privacy policy and consent to be contacted.</label>
         </div>
 
-        <!-- <div data-netlify-recaptcha="true"></div> -->
+        <div data-netlify-recaptcha="true"></div>
 
         <input type="hidden" name="utm_source" />
         <input type="hidden" name="utm_medium" />
@@ -313,8 +312,7 @@
       </form>
     </section>
 
-    <div id="thankyou-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="thanks-title"
-      aria-hidden="true">
+    <div id="thankyou-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="thanks-title" aria-hidden="true">
       <div class="modal">
         <h3 id="thanks-title">Thank you!</h3>
         <p id="thanks-body">Your request has been received.</p>
@@ -368,11 +366,7 @@
         if (expected && provided !== expected) { alert('Incorrect human check. Try again.'); return; }
         if (!form.reportValidity()) return;
 
-        console.log("submission-created LOADED"); // keep this
-
         const data = new FormData(form);
-        if (!data.get("form-name")) data.set("form-name", "consultation"); // belt-and-suspenders
-
         const body = new URLSearchParams();
         for (const [k, v] of data.entries()) body.append(k, v);
 
@@ -382,16 +376,6 @@
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body.toString()
           });
-
-          const text = await res.text();
-          console.log("Netlify submit OK:", res.status, text);
-          if (!res.ok) {
-            console.error("Netlify submit failed:", res.status, text);
-            alert('Submission error. Please try again.');
-            return;
-          }
-
-
           if (res.ok) {
             const first = (document.getElementById('firstName')?.value || '').trim();
             const last = (document.getElementById('lastName')?.value || '').trim();
@@ -404,6 +388,15 @@
           alert('Network error. Please try again.');
         }
       });
+    })();
+    </script>
+  <script>
+    // Dynamic honeypot naming to avoid autofill and basic bots
+    (function(){
+      var key = 'hp_' + Math.random().toString(36).slice(2);
+      var hpKey = document.getElementById('hp_key');
+      var hpField = document.getElementById('hp_field');
+      if(hpKey && hpField){ hpKey.value = key; hpField.setAttribute('name', key); }
     })();
   </script>
 </body>
