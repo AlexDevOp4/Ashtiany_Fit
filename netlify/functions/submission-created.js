@@ -284,12 +284,14 @@ async function sendOwnerEmail(lead) {
   if (!to) throw new Error("Missing SALES_EMAIL");
 
   const html = `
-    <h3>New Lead (debug)</h3>
-    <p>${esc(lead.firstName)} ${esc(lead.lastName)} — ${esc(lead.email)}</p>
-    <p>Interest: ${esc(lead.interest)} | Best time: ${esc(lead.bestTime)}</p>
-    <p>TTC: ${Number(lead.time_to_complete) || 0} ms</p>
+    <h3>New Lead — Ashtiany Fitness</h3>
+    <p><strong>${esc(lead.firstName)} ${esc(lead.lastName)}</strong> — ${esc(lead.email)}</p>
+    <p><strong>Interest:</strong> ${esc(lead.interest)} &nbsp;|&nbsp; <strong>Best time:</strong> ${esc(lead.bestTime)}</p>
+    <p><strong>Context (goals, constraints, timeline):</strong><br>${nl2br(esc(lead.goals || "(none provided)"))}</p>
+    <p><strong>TTC:</strong> ${Number(lead.time_to_complete) || 0} ms</p>
   `;
-  const res = await fetch(POSTMARK_API, {
+
+  const res = await fetch("https://api.postmarkapp.com/email", {
     method: "POST",
     headers: {
       "X-Postmark-Server-Token": token,
@@ -298,15 +300,28 @@ async function sendOwnerEmail(lead) {
     body: JSON.stringify({
       From: to,
       To: to,
-      Subject: "Ashtiany Fitness — Debug lead ping",
+      Subject: `New Lead: ${lead.firstName} ${lead.lastName} — ${lead.interest}`,
       HtmlBody: html,
       MessageStream: "outbound",
     }),
   });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Postmark(owner) failed: ${res.status} ${txt}`);
-  }
+  if (!res.ok)
+    throw new Error(
+      `Postmark(owner) failed: ${res.status} ${await res.text()}`
+    );
+}
+
+// helpers already in your file; keep them:
+function esc(s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+function nl2br(s) {
+  return String(s || "").replace(/\n/g, "<br/>");
 }
 
 function esc(s) {
