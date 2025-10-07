@@ -2,6 +2,8 @@ const POSTMARK_API = "https://api.postmarkapp.com/email";
 const AIRTABLE_API = "https://api.airtable.com/v0";
 
 exports.handler = async (event) => {
+  console.log("submission-created LOADED");
+
   try {
     const bodyRaw = event.body || "{}";
     console.log("RAW EVENT BODY:", bodyRaw.slice(0, 2000)); // truncate for logs
@@ -84,13 +86,6 @@ async function sendOwnerEmail(lead) {
       To: to,
       Subject: `New Lead: ${lead.firstName} ${lead.lastName} — ${lead.interest}`,
       HtmlBody: html,
-      TextBody:
-        `New Lead — Ashtiany Fitness\n` +
-        `${lead.firstName} ${lead.lastName} — ${lead.email}\n` +
-        `Interest: ${lead.interest} | Best time: ${lead.bestTime}\n` +
-        `Context:\n${lead.goals || "(none provided)"}\n` +
-        `TTC: ${Number(lead.time_to_complete) || 0} ms`,
-      ReplyTo: lead.email,
       MessageStream: "outbound",
     }),
   });
