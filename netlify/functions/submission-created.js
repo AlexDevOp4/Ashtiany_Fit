@@ -48,6 +48,23 @@ exports.handler = async (event) => {
 
     // Send owner email (with full diagnostics)
     const result = await sendOwnerEmail(lead);
+
+    // fire-and-forget client confirmation (don't block on failure)
+    try {
+      await sendClientEmail(lead);
+      console.log("CLIENT EMAIL SENT");
+    } catch (e) {
+      console.error("CLIENT EMAIL FAILED:", e);
+    }
+
+    // Airtable insert (non-fatal on failure)
+    try {
+      const air = await airtableInsert(lead, data);
+      console.log("AIRTABLE RESULT:", air);
+    } catch (e) {
+      console.error("AIRTABLE FAILED:", e);
+    }
+
     console.log("POSTMARK SEND RESULT:", result);
 
     return ok("Owner email attempted");
@@ -62,6 +79,56 @@ exports.handler = async (event) => {
 
 function ok(message) {
   return { statusCode: 200, body: JSON.stringify({ ok: true, message }) };
+}
+
+async function sendClientEmail(lead) {
+  const token = process.env.POSTMARK_TOKEN;
+  const from = process.env.SALES_EMAIL; // verified domain address
+  if (!token) throw new Error("Missing POSTMARK_TOKEN");
+  if (!from) throw new Error("Missing SALES_EMAIL");
+
+  const first = lead.firstName || "there";
+
+  const html = `
+    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#0b1324">
+      <h2 style="margin:0 0 8px 0">Thanks, ${esc(first)} — we got your request.</h2>
+      <p>We’ll email you shortly to schedule your consultation.</p>
+      <hr style="border:none;height:1px;background:#e9eef6;margin:16px 0" />
+      <p style="margin:0 0 6px 0"><strong>Summary</strong></p>
+      <p style="margin:0">Name: ${esc(lead.firstName)} ${esc(lead.lastName)}</p>
+      <p style="margin:0">Email: ${esc(lead.email)}</p>
+      <p style="margin:0">Interest: ${esc(lead.interest)} | Best time: ${esc(lead.bestTime)}</p>
+      <p style="margin:8px 0 0 0"><strong>Context</strong><br>${nl2br(esc(lead.goals || "(none provided)"))}</p>
+      <p style="margin-top:16px">— Ashtiany Fitness</p>
+    </div>
+  `;
+
+  const payload = {
+    From: from,
+    To: lead.email,
+    Subject: `We received your consultation request, ${first}`,
+    HtmlBody: html,
+    TextBody:
+      `Thanks, ${first} — we got your request.\n\n` +
+      `Interest: ${lead.interest} | Best time: ${lead.bestTime}\n\n` +
+      `Context:\n${lead.goals || "(none provided)"}\n\n` +
+      `— Ashtiany Fitness`,
+    ReplyTo: from,
+    MessageStream: "outbound",
+  };
+
+  const res = await fetch(POSTMARK_API, {
+    method: "POST",
+    headers: {
+      "X-Postmark-Server-Token": token,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  if (!res.ok)
+    throw new Error(`Postmark(client) failed: ${res.status} ${text}`);
+  return { status: res.status, body: text };
 }
 
 async function sendOwnerEmail(lead) {
@@ -116,6 +183,47 @@ async function sendOwnerEmail(lead) {
     throw new Error(`Postmark failed: ${res.status} ${text}`);
   }
   return { status: res.status, body: text };
+}
+
+async function airtableInsert(lead, raw) {
+  const token = process.env.AIRTABLE_TOKEN;
+  const base = process.env.AIRTABLE_BASE_ID;
+  const table = process.env.AIRTABLE_TABLE_NAME;
+  if (!token || !base || !table) throw new Error("Missing Airtable env");
+
+  // Map to your column names in Airtable
+  const fields = {
+    "First Name": lead.firstName,
+    "Last Name": lead.lastName,
+    Email: lead.email,
+    Interest: lead.interest,
+    "Best Time": lead.bestTime,
+    Goals: lead.goals,
+    "TTC (ms)": Number(lead.time_to_complete) || 0,
+    Referrer: raw.referrer || "",
+    "Landing Path": raw.landing_path || "",
+    Device: raw.device || "",
+    utm_source: raw.utm_source || "",
+    utm_medium: raw.utm_medium || "",
+    utm_campaign: raw.utm_campaign || "",
+    utm_term: raw.utm_term || "",
+    utm_content: raw.utm_content || "",
+    "Created At": new Date().toISOString(),
+  };
+
+  const url = `${AIRTABLE_API}/${encodeURIComponent(base)}/${encodeURIComponent(table)}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ records: [{ fields }], typecast: false }),
+  });
+
+  const text = await res.text();
+  if (!res.ok) throw new Error(`Airtable ${res.status}: ${text}`);
+  return JSON.parse(text);
 }
 
 // --- helpers (single copy) ---
