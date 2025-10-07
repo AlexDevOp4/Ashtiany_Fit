@@ -1,30 +1,29 @@
 const POSTMARK_API = "https://api.postmarkapp.com/email";
-const AIRTABLE_API = "https://api.airtable.com/v0";
 
 exports.handler = async (event) => {
-  console.log("submission-created LOADED");
-
   try {
+    console.log("submission-created LOADED");
+
     const bodyRaw = event.body || "{}";
-    console.log("RAW EVENT BODY:", bodyRaw.slice(0, 2000)); // truncate for logs
     const body = JSON.parse(bodyRaw);
     const data = body?.payload?.data || {};
     const formName = body?.payload?.form_name || "";
     console.log("FORM NAME:", formName);
-    console.log("ENV CHECK:", {
+
+    // Env check
+    const ENV = {
       has_POSTMARK: !!process.env.POSTMARK_TOKEN,
       SALES_EMAIL: process.env.SALES_EMAIL,
-      has_AIRTABLE_TOKEN: !!process.env.AIRTABLE_TOKEN,
-      AIRTABLE_BASE_ID: process.env.AIRTABLE_BASE_ID,
-      AIRTABLE_TABLE_NAME: process.env.AIRTABLE_TABLE_NAME,
-    });
+      STREAM: "outbound",
+    };
+    console.log("ENV CHECK:", ENV);
 
     if (formName !== "consultation") {
       console.log("IGNORED: not our form");
       return ok("Ignored non-consultation form");
     }
 
-    // server-side anti-spam
+    // --- Anti-spam (keep these once working) ---
     const ttc = Number(data.time_to_complete || 0);
     if (data.company && String(data.company).trim() !== "") {
       console.log("HONEYPOT");
@@ -35,8 +34,7 @@ exports.handler = async (event) => {
       return ok("Too fast");
     }
 
-    // Minimal send to prove Postmark works from the event
-    await sendOwnerEmail({
+    const lead = {
       firstName: data.firstName || "",
       lastName: data.lastName || "",
       email: (data.email || "").toLowerCase(),
@@ -44,10 +42,15 @@ exports.handler = async (event) => {
       bestTime: data.bestTime || "",
       goals: data.goals || "",
       time_to_complete: ttc,
-    });
+    };
 
-    console.log("OWNER EMAIL SENT. Proceed to Airtable next if needed.");
-    return ok("Debug: owner email sent");
+    console.log("LEAD:", lead);
+
+    // Send owner email (with full diagnostics)
+    const result = await sendOwnerEmail(lead);
+    console.log("POSTMARK SEND RESULT:", result);
+
+    return ok("Owner email attempted");
   } catch (err) {
     console.error("ERROR in submission-created:", err);
     return {
@@ -64,6 +67,7 @@ function ok(message) {
 async function sendOwnerEmail(lead) {
   const token = process.env.POSTMARK_TOKEN;
   const to = process.env.SALES_EMAIL;
+
   if (!token) throw new Error("Missing POSTMARK_TOKEN");
   if (!to) throw new Error("Missing SALES_EMAIL");
 
@@ -75,27 +79,46 @@ async function sendOwnerEmail(lead) {
     <p><strong>TTC:</strong> ${Number(lead.time_to_complete) || 0} ms</p>
   `;
 
-  const res = await fetch("https://api.postmarkapp.com/email", {
+  const payload = {
+    From: to, // MUST be a verified sender/domain in Postmark
+    To: to,
+    Subject: `New Lead: ${lead.firstName} ${lead.lastName} — ${lead.interest}`,
+    HtmlBody: html,
+    TextBody:
+      `New Lead — Ashtiany Fitness\n` +
+      `${lead.firstName} ${lead.lastName} — ${lead.email}\n` +
+      `Interest: ${lead.interest} | Best time: ${lead.bestTime}\n` +
+      `Context:\n${lead.goals || "(none provided)"}\n` +
+      `TTC: ${Number(lead.time_to_complete) || 0} ms`,
+    ReplyTo: lead.email, // lets you reply straight to the lead
+    MessageStream: "outbound", // MUST match your transactional stream
+  };
+
+  console.log("POSTMARK REQUEST:", {
+    to: payload.To,
+    from: payload.From,
+    subject: payload.Subject,
+    stream: payload.MessageStream,
+  });
+
+  const res = await fetch(POSTMARK_API, {
     method: "POST",
     headers: {
       "X-Postmark-Server-Token": token,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      From: to,
-      To: to,
-      Subject: `New Lead: ${lead.firstName} ${lead.lastName} — ${lead.interest}`,
-      HtmlBody: html,
-      MessageStream: "outbound",
-    }),
+    body: JSON.stringify(payload),
   });
-  if (!res.ok)
-    throw new Error(
-      `Postmark(owner) failed: ${res.status} ${await res.text()}`
-    );
+
+  const text = await res.text();
+  if (!res.ok) {
+    console.error("POSTMARK ERROR:", res.status, text);
+    throw new Error(`Postmark failed: ${res.status} ${text}`);
+  }
+  return { status: res.status, body: text };
 }
 
-// helpers already in your file; keep them:
+// --- helpers (single copy) ---
 function esc(s) {
   return String(s || "")
     .replace(/&/g, "&amp;")
@@ -105,5 +128,5 @@ function esc(s) {
     .replace(/'/g, "&#039;");
 }
 function nl2br(s) {
-  return String(s || "").replace(/\n/g, "<br/>");
+  return String(s || "").replace(/\\n/g, "<br/>");
 }
