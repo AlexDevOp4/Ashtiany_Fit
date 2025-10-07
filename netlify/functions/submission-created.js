@@ -191,7 +191,6 @@ async function airtableInsert(lead, raw) {
   const table = process.env.AIRTABLE_TABLE_NAME;
   if (!token || !base || !table) throw new Error("Missing Airtable env");
 
-  // Map to your column names in Airtable
   const fields = {
     "First Name": lead.firstName,
     "Last Name": lead.lastName,
