@@ -83,9 +83,20 @@ function ok(message) {
 
 async function sendClientEmail(lead) {
   const token = process.env.POSTMARK_TOKEN;
-  const from = process.env.SALES_EMAIL; // verified domain address
+  const from = process.env.SALES_EMAIL;
   if (!token) throw new Error("Missing POSTMARK_TOKEN");
   if (!from) throw new Error("Missing SALES_EMAIL");
+
+  // Guard while account pending approval
+  const fromDomain = getDomain(from);
+  const toDomain = getDomain(lead.email);
+  if (fromDomain && toDomain && fromDomain !== toDomain) {
+    console.log("CLIENT EMAIL SKIPPED (pending approval domain restriction)", {
+      fromDomain,
+      toDomain,
+    });
+    return { skipped: true, reason: "postmark-pending-approval" };
+  }
 
   const first = lead.firstName || "there";
 
@@ -191,6 +202,9 @@ async function airtableInsert(lead, raw) {
   const table = process.env.AIRTABLE_TABLE_NAME;
   if (!token || !base || !table) throw new Error("Missing Airtable env");
 
+  const url = `${AIRTABLE_API}/${encodeURIComponent(base)}/${encodeURIComponent(table)}`;
+  console.log("AIRTABLE URL:", url);
+
   const fields = {
     "First Name": lead.firstName,
     "Last Name": lead.lastName,
@@ -210,7 +224,6 @@ async function airtableInsert(lead, raw) {
     "Created At": new Date().toISOString(),
   };
 
-  const url = `${AIRTABLE_API}/${encodeURIComponent(base)}/${encodeURIComponent(table)}`;
   const res = await fetch(url, {
     method: "POST",
     headers: {
@@ -221,9 +234,13 @@ async function airtableInsert(lead, raw) {
   });
 
   const text = await res.text();
-  if (!res.ok) throw new Error(`Airtable ${res.status}: ${text}`);
+  if (!res.ok) {
+    console.error("AIRTABLE ERROR:", res.status, text);
+    throw new Error(`Airtable ${res.status}: ${text}`);
+  }
   return JSON.parse(text);
 }
+
 
 function esc(s) {
   return String(s || "")
