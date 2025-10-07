@@ -238,7 +238,7 @@
     </section>
 
     <section class="card">
-      <form name="consultation" method="POST" data-netlify="true" netlify-honeypot="company">
+      <form name="consultation" method="POST" data-netlify="true">
         <input type="hidden" name="form-name" value="consultation" />
 
         <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">
@@ -297,7 +297,7 @@
           <label for="consent">I agree to the privacy policy and consent to be contacted.</label>
         </div>
 
-        <div data-netlify-recaptcha="true"></div>
+        <!-- <div data-netlify-recaptcha="true"></div> -->
 
         <input type="hidden" name="utm_source" />
         <input type="hidden" name="utm_medium" />
@@ -368,7 +368,11 @@
         if (expected && provided !== expected) { alert('Incorrect human check. Try again.'); return; }
         if (!form.reportValidity()) return;
 
+        console.log("submission-created LOADED"); // keep this
+
         const data = new FormData(form);
+        if (!data.get("form-name")) data.set("form-name", "consultation"); // belt-and-suspenders
+
         const body = new URLSearchParams();
         for (const [k, v] of data.entries()) body.append(k, v);
 
