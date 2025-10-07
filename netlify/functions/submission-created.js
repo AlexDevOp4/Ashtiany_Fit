@@ -225,7 +225,6 @@ async function airtableInsert(lead, raw) {
   return JSON.parse(text);
 }
 
-// --- helpers (single copy) ---
 function esc(s) {
   return String(s || "")
     .replace(/&/g, "&amp;")
