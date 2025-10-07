@@ -81,6 +81,14 @@ function ok(message) {
   return { statusCode: 200, body: JSON.stringify({ ok: true, message }) };
 }
 
+function getDomain(email) {
+  return (
+    String(email || "")
+      .split("@")[1]
+      ?.toLowerCase() || ""
+  );
+}
+
 async function sendClientEmail(lead) {
   const token = process.env.POSTMARK_TOKEN;
   const from = process.env.SALES_EMAIL;
@@ -240,7 +248,6 @@ async function airtableInsert(lead, raw) {
   }
   return JSON.parse(text);
 }
-
 
 function esc(s) {
   return String(s || "")
