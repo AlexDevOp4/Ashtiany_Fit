@@ -232,6 +232,14 @@ async function airtableInsert(lead, raw) {
     "Created At": new Date().toISOString(),
   };
 
+  const probe = await fetch(
+    `${AIRTABLE_API}/${encodeURIComponent(base)}/${encodeURIComponent(table)}?maxRecords=1`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+  console.log("AIRTABLE PROBE:", probe.status, await probe.text());
+
   const res = await fetch(url, {
     method: "POST",
     headers: {
