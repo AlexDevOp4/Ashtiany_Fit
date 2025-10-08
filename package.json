@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/AlexDevOp4/Ashtiany_Fit#readme",
   "dependencies": {
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "qrcode": "^1.5.4"
   }
 }
