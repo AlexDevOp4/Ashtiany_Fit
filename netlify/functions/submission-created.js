@@ -229,7 +229,6 @@ async function airtableInsert(lead, raw) {
     utm_campaign: raw.utm_campaign || "",
     utm_term: raw.utm_term || "",
     utm_content: raw.utm_content || "",
-    "Created At": new Date().toISOString(),
   };
 
   const probe = await fetch(
