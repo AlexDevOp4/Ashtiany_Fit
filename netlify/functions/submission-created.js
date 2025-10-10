@@ -34,6 +34,61 @@ exports.handler = async (event) => {
       return ok("Too fast");
     }
 
+    // --- Anti-spam (keep these once working) ---
+    const ttc = Number(data.time_to_complete || 0);
+    if (data.company && String(data.company).trim() !== "") {
+      console.log("HONEYPOT");
+      return ok("Honeypot");
+    }
+    if (isFinite(ttc) && ttc < 5000) {
+      console.log("TOO FAST", ttc);
+      return ok("Too fast");
+    }
+
+    // --- Additional filters ---
+    const email = (data.email || "").toLowerCase();
+    const badDomains = [
+      "bdcimail.com",
+      "webmai.co",
+      "mailinator.com",
+      "tempmail",
+      "guerrillamail",
+      "10minutemail",
+      "sharklasers.com",
+      "yopmail.com",
+      "dispostable.com",
+    ];
+    const emailDomain = email.split("@")[1] || "";
+    if (
+      !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ||
+      badDomains.some((d) => emailDomain.endsWith(d))
+    ) {
+      console.log("SPAM: bad email", email);
+      return ok("Spam filtered (email)");
+    }
+
+    const ALLOWED_INTEREST = new Set([
+      "Strength Training",
+      "Fat Loss",
+      "Recomposition",
+      "Virtual Coaching",
+      "Hybrid Program",
+    ]);
+    const ALLOWED_TIME = new Set([
+      "Early Morning (5–7 AM)",
+      "Morning (7–10 AM)",
+      "Midday (11 AM–2 PM)",
+      "Afternoon (2–5 PM)",
+      "Evening (5–8 PM)",
+    ]);
+    if (
+      !ALLOWED_INTEREST.has(data.interest) ||
+      !ALLOWED_TIME.has(data.bestTime)
+    ) {
+      console.log("SPAM: invalid select values", data.interest, data.bestTime);
+      return ok("Spam filtered (select)");
+    }
+
     const lead = {
       firstName: data.firstName || "",
       lastName: data.lastName || "",
@@ -43,8 +98,6 @@ exports.handler = async (event) => {
       goals: data.goals || "",
       time_to_complete: ttc,
     };
-
-    console.log("LEAD:", lead);
 
     // Send owner email (with full diagnostics)
     const result = await sendOwnerEmail(lead);
@@ -265,5 +318,5 @@ function esc(s) {
     .replace(/'/g, "&#039;");
 }
 function nl2br(s) {
-  return String(s || "").replace(/\\n/g, "<br/>");
+  return String(s || "").replace(/\n/g, "<br/>");
 }
