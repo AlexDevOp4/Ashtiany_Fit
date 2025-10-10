@@ -34,17 +34,6 @@ exports.handler = async (event) => {
       return ok("Too fast");
     }
 
-    // --- Anti-spam (keep these once working) ---
-    const ttc = Number(data.time_to_complete || 0);
-    if (data.company && String(data.company).trim() !== "") {
-      console.log("HONEYPOT");
-      return ok("Honeypot");
-    }
-    if (isFinite(ttc) && ttc < 5000) {
-      console.log("TOO FAST", ttc);
-      return ok("Too fast");
-    }
-
     // --- Additional filters ---
     const email = (data.email || "").toLowerCase();
     const badDomains = [
